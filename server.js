@@ -6,6 +6,8 @@ const { Server } = require("socket.io");
 const { connectRabbitMQ } = require("./rabbitmq/connection");
 const { consumeNumbers } = require("./rabbitmq/consumer");
 const { startTimer } = require("./services/timerService");
+const authRoutes = require("./routes/authRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
@@ -22,6 +24,9 @@ const io = new Server(server, {
     origin: "*",
   },
 });
+
+app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 
 io.on("connection", (socket) => {
   console.log("Client Connected");
