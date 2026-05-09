@@ -27,6 +27,8 @@ io.on("connection", (socket) => {
   console.log("Client Connected");
 });
 
+app.set("io", io);
+
 const startServer = async () => {
   await connectRabbitMQ();
   await consumeNumbers(io);

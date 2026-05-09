@@ -112,7 +112,21 @@ const selectNumber = (
       bet.betAmount
     );
   });
-
+  req.app
+  .get("io")
+  .emit(
+    "analyticsUpdated",
+    {
+      userBets:
+        getUserBets(),
+      numberTotals:
+        getNumberTotals(),
+      totalPool:
+        getTotalPool(),
+      percentages:
+        getNumberPercentages(),
+    }
+  );
   res.json({
     success: true,
   });
