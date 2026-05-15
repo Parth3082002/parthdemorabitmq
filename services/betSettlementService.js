@@ -103,13 +103,55 @@ const settlePendingBetsForGame =
     if (!gameId) {
       return {
         settledCount: 0,
+        skipped: true,
+      };
+    }
+
+    const { data: gameRow } =
+      await supabase
+        .from("games")
+        .select("status")
+        .eq("id", gameId)
+        .single();
+
+    if (
+      !gameRow ||
+      gameRow.status ===
+        "settled"
+    ) {
+      return {
+        settledCount: 0,
+        skipped: true,
+        reason:
+          "already_settled",
+      };
+    }
+
+    const { data: locked } =
+      await supabase
+        .from("games")
+        .update({
+          status: "settling",
+        })
+        .eq("id", gameId)
+        .in("status", [
+          "open",
+          "active",
+        ])
+        .select("id")
+        .maybeSingle();
+
+    if (!locked) {
+      return {
+        settledCount: 0,
+        skipped: true,
+        reason:
+          "not_open_for_settlement",
       };
     }
 
     const winKey =
-      String(
-        publishedNumber
-      );
+      String(publishedNumber);
 
     const { data: pending, error } =
       await supabase
@@ -132,31 +174,52 @@ const settlePendingBetsForGame =
 
     if (
       !pending ||
-      pending.length ===
-        0
+      pending.length === 0
     ) {
       return {
         settledCount: 0,
+        skipped: false,
       };
     }
 
     const payoutByUser =
       new Map();
+    const settledBetIds = [];
 
-    for (
-      const bet of pending
-    ) {
+    for (const bet of pending) {
       const won =
-        String(
-          bet.bet_number
-        ) === winKey;
+        String(bet.bet_number) ===
+        winKey;
+      const newStatus = won
+        ? "won"
+        : "lost";
+
+      const { data: updated } =
+        await supabase
+          .from("bets")
+          .update({
+            status: newStatus,
+          })
+          .eq("id", bet.id)
+          .eq(
+            "status",
+            "pending"
+          )
+          .select("id");
+
+      if (
+        !updated ||
+        updated.length === 0
+      ) {
+        continue;
+      }
+
+      settledBetIds.push(bet.id);
 
       if (won) {
         const payout =
           WIN_MULTIPLIER *
-          Number(
-            bet.amount
-          );
+          Number(bet.amount);
         const prev =
           payoutByUser.get(
             bet.user_id
@@ -166,25 +229,13 @@ const settlePendingBetsForGame =
           prev + payout
         );
       }
-
-      await supabase
-        .from("bets")
-        .update({
-          status: won
-            ? "won"
-            : "lost",
-        })
-        .eq("id", bet.id);
     }
 
     for (const [
       userId,
       totalPayout,
     ] of payoutByUser) {
-      if (
-        totalPayout <=
-        0
-      ) {
+      if (totalPayout <= 0) {
         continue;
       }
 
@@ -204,7 +255,9 @@ const settlePendingBetsForGame =
 
     return {
       settledCount:
-        pending.length,
+        settledBetIds.length,
+      winnersPaid:
+        payoutByUser.size,
     };
   };
 

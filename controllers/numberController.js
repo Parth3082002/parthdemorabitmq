@@ -29,6 +29,7 @@ const {
 
 let manualNumber = null;
 let publishedHistory = [];
+let isPublishing = false;
 
 const manualPublish = async (
   req,
@@ -156,6 +157,13 @@ const getPublishedHistory = (
 };
 
 const executePublish = async () => {
+  if (isPublishing) {
+    return;
+  }
+
+  isPublishing = true;
+
+  try {
   const { gameId: gameIdToSettle } =
     beginSettlement();
 
@@ -217,6 +225,9 @@ const executePublish = async () => {
   await publishNumber({
     number: finalNumber,
   });
+  } finally {
+    isPublishing = false;
+  }
 };
 
 module.exports = {
