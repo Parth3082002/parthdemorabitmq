@@ -28,13 +28,20 @@ const {
   "../controllers/numberController"
 );
 
+const auth = require("../middleware/authMiddleware");
+const role = require("../middleware/roleMiddleware");
+
 router.post(
   "/manual-publish",
+  auth,
+  role("admin"),
   manualPublish
 );
 
 router.post(
   "/select-number",
+  auth,
+  role("user"),
   selectNumber
 );
 

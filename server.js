@@ -7,6 +7,9 @@ const { Server } = require("socket.io");
 const { connectRabbitMQ } = require("./rabbitmq/connection");
 const { consumeNumbers } = require("./rabbitmq/consumer");
 const { startTimer } = require("./services/timerService");
+const {
+  ensureOpenRound,
+} = require("./services/gameRoundService");
 
 const walletRoutes = require("./routes/walletRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -90,6 +93,8 @@ app.set("io", io);
 const startServer =
   async () => {
     await connectRabbitMQ();
+
+    await ensureOpenRound();
 
     await consumeNumbers(io);
 
